@@ -119,9 +119,9 @@ class EditWindow(QMainWindow):
         ###
         
         # For ease of styling
+        # An increment in maxIndex is symbolised by ####
         self.maxIndex = 0
-        
-        
+         
         # Create larger font for points
         titleFont = QFont("Times", 10, QtGui.QFont.Bold) 
         self.saveTag = QLabel("Save filename: ")
@@ -130,17 +130,11 @@ class EditWindow(QMainWindow):
         self.layout.addWidget(self.saveTag, self.maxIndex, 0)
         self.layout.addWidget(self.saveInput, self.maxIndex, 1)
         
- 
-        
-        
-        
         ####
         self.maxIndex = self.maxIndex+1
-        
         self.timeTag = QLabel("Trial length (s)")
         self.timeTag.setFont(titleFont)
         self.layout.addWidget(self.timeTag, self.maxIndex, 0)
-        
         
         ####
         self.maxIndex = self.maxIndex+1
@@ -152,38 +146,31 @@ class EditWindow(QMainWindow):
         if(self.info.color_time == 1):
             self.colorTime.toggle()
         
-        
         self.layout.addWidget(self.timeInput, self.maxIndex, 0)
         self.layout.addWidget(self.showTime, self.maxIndex, 1)
         self.layout.addWidget(self.colorTime, self.maxIndex, 2)
         
-        
-        #####
+        ####
         self.maxIndex = self.maxIndex+1
         pointLabel = QLabel("Points")
         self.layout.addWidget(pointLabel, self.maxIndex, 0)
         
-        
-        ######
+        ####
         self.maxIndex = self.maxIndex+1
         self.showPoints = QCheckBox("Show Points")
         if(self.info.show_points == 1):
             self.showPoints.toggle()
         
-        
         self.startingPoints = QLineEdit(str(self.info.start_points))
-        
         self.addPoints = QCheckBox("Gain points")
         if(self.info.add_points == 1):
             self.addPoints.toggle()
       
-        
-        
         self.layout.addWidget(self.showPoints, self.maxIndex, 1)
         self.layout.addWidget(self.startingPoints, self.maxIndex, 0)
         self.layout.addWidget(self.addPoints, self.maxIndex, 2)
         
-        ######
+        ####
         self.maxIndex = self.maxIndex+1
         self.blocking = QCheckBox("Blocking")
         if(self.info.blocking):
@@ -192,22 +179,17 @@ class EditWindow(QMainWindow):
         if(self.info.remove_points == 1):
             self.removePoints.toggle()
             
-        
         self.layout.addWidget(self.blocking, self.maxIndex, 1)
         self.layout.addWidget(self.removePoints, self.maxIndex, 2)
         
-        ###
+        ####
         self.maxIndex = self.maxIndex+1
-    
         self.styleTag = QLabel("Styles")
         self.layout.addWidget(self.styleTag, 6, 0)
         self.styleTag.setFont(titleFont)
          
-        ###
+        ####
         self.maxIndex = self.maxIndex+1
-        
-        
-        
         self.style = QComboBox(self)
         self.style.addItem("light theme")
         self.style.addItem("dark theme")
@@ -215,11 +197,8 @@ class EditWindow(QMainWindow):
         self.style.addItem("No feedback theme")
         self.style.setCurrentIndex(self.info.style)
         pointLabel.setFont(titleFont)
-
         self.layout.addWidget(self.style, self.maxIndex, 0)
 
-        
-        
         ###
         ## Update settings.
         ###
@@ -242,13 +221,13 @@ class EditWindow(QMainWindow):
         submitButton.clicked.connect(self.submit)
         
         
-        ###
+        ####
         self.maxIndex = self.maxIndex+1
         self.layout.addWidget(addButton, self.maxIndex, 0)
         self.layout.addWidget(removeButton, self.maxIndex, 1)
         self.layout.addWidget(submitButton, self.maxIndex, 2)
         
-        ###
+        ####
         self.maxIndex = self.maxIndex+1
         self.layout.addWidget(typeTag, self.maxIndex, 0)
         self.layout.addWidget(valueTag, self.maxIndex, 1)
@@ -260,6 +239,9 @@ class EditWindow(QMainWindow):
     
     
     def fill(self):
+        '''
+            Add actions for each actions currently in aciton list in info package.
+        '''
         for a in self.Actions:
             self.add(a.type, a.value, a.time)
         
@@ -267,35 +249,38 @@ class EditWindow(QMainWindow):
         
     
     def add(self, ty = 0, v = "1", ti = "0"):
-               
-            self.typeBox = QComboBox(self)
-            
-            self.typeBox.addItem("sensitivity")
-            self.typeBox.addItem("square1x(%)")
-            self.typeBox.addItem("square2x(%)")
-            self.typeBox.addItem("square1width")
-            self.typeBox.addItem("square2width")
-            self.typeBox.addItem("invert(1/0)")
-            self.typeBox.setCurrentIndex(ty)
-            
-            offset = 9
-            
-            
-            self.ActionsTypes.append(self.typeBox)
-            
-            currentIndex = len(self.ActionsTypes)
-            
-            self.layout.addWidget(self.typeBox, self.maxIndex, 0)
-            
-            
-            self.valueBox = QLineEdit(v)
-            self.ActionsValues.append(self.valueBox)
-            self.layout.addWidget(self.valueBox,  self.maxIndex, 1)
+        '''
+            Add new action. Increment maxIndex.
+            Creates a combo box and two inputs for value and time.
+        '''
+        self.typeBox = QComboBox(self)
         
-            self.timeBox = QLineEdit (ti)
-            self.ActionsTimes.append(self.timeBox)
-            self.layout.addWidget(self.timeBox,  self.maxIndex, 2)
-            self.maxIndex = self.maxIndex + 1
+        self.typeBox.addItem("sensitivity")
+        self.typeBox.addItem("square1x(%)")
+        self.typeBox.addItem("square2x(%)")
+        self.typeBox.addItem("square1width")
+        self.typeBox.addItem("square2width")
+        self.typeBox.addItem("invert(1/0)")
+        self.typeBox.setCurrentIndex(ty)
+        
+        offset = 9
+        
+        
+        self.ActionsTypes.append(self.typeBox)
+        
+        currentIndex = len(self.ActionsTypes)
+        
+        self.layout.addWidget(self.typeBox, self.maxIndex, 0)
+        
+        
+        self.valueBox = QLineEdit(v)
+        self.ActionsValues.append(self.valueBox)
+        self.layout.addWidget(self.valueBox,  self.maxIndex, 1)
+    
+        self.timeBox = QLineEdit (ti)
+        self.ActionsTimes.append(self.timeBox)
+        self.layout.addWidget(self.timeBox,  self.maxIndex, 2)
+        self.maxIndex = self.maxIndex + 1
             
     def remove(self):
         '''
@@ -308,36 +293,45 @@ class EditWindow(QMainWindow):
             self.ActionsTimes.pop().deleteLater()
             
     def submit(self):
+        '''
+            Submit all information for information package.
+        '''
+        
+        ## Initalise variables.
         infoPackage = self.parent.getInfoPackage()
         temp_list = list()
         i = 0
-        
-        
-        
-
         startPoints = 0
+        
+        ## Catch if startpoints is not a number.
         try:
             startPoints = int(self.startingPoints.text())
         except:
             startingPoints = 0
             
    
-        
+        ## Set all other options.    
         self.info.setFileName(self.saveInput.text())
         self.info.setTrialTime(self.timeInput.text(), self.showTime.isChecked(), self.colorTime.isChecked())
         self.info.setStyle(self.style.currentIndex(), self.blocking.isChecked())
         self.info.setPoints(startPoints, self.showPoints.isChecked(), self.addPoints.isChecked(), self.removePoints.isChecked())
       
         
+        ## Create actions list from inputs.
         for i in range(0, len(self.ActionsTypes)):
             type = self.ActionsTypes[i].currentIndex()
             val = self.ActionsValues[i].text()
             time = self.ActionsTimes[i].text()
             
+            # Create action object.
             temp_action = EditAction(type, val, time)
             
+            # Add action object to queue.
             temp_list.append(temp_action)
+        
+        # Assign queue to info package.
         self.info.setActions(temp_list)
+        # Close settings window.
         self.close()
         
 class MainWindow(QMainWindow):
