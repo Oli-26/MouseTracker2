@@ -8,7 +8,6 @@ from PyQt5.QtCore import QRect, QPoint, QTimer
 import sys
 from pynput.mouse import Controller
 from inputs import devices, get_gamepad
-#import pyautogui
 import random
 import pygame 
 from threading import Timer
@@ -21,16 +20,18 @@ import os
 class StartWindow(QMainWindow):
     def __init__(self):
         super(StartWindow, self).__init__()
+       
+        ## Generic window set up.
         self.setWindowTitle("Main Menu")
-        
-
         self.layout = QGridLayout()
         self.main_widget = QWidget()
         self.setCentralWidget(self.main_widget) 
         self.main_widget.setLayout(self.layout)
         
+        ## This object holds the settings set by the user. 
         self.infoPackage = InfoPackage()
-        
+       
+        ## Add buttons and connect them to actions.
         startButton = QPushButton("Start")
         editButton = QPushButton("Edit")
         
@@ -55,6 +56,7 @@ class StartWindow(QMainWindow):
 
 class InfoPackage():
     def __init__(self):
+        ## Trail settings.
         self.Actions = list()
         self.trial_length = 20
         self.style = 0
@@ -67,8 +69,10 @@ class InfoPackage():
         self.color_time = False
         self.filename = "filename"
     
-        self.style_list = ["light", "dark", "strange", "no feedback"]
+        ## These lists are required for exporting to excel. 
+        self.style_list = ["light", "dark", "strange", "no feedback"] 
         self.action_types = ["sensitivity" , "square1x", "square2x", "square1width", "square2width", "invert"]
+        
     def setActions(self, actionList):
         self.Actions = actionList
     
@@ -81,12 +85,12 @@ class InfoPackage():
         self.style = type
         self.blocking = block
         
-
     def setPoints(self, amount, showPoints, addPoints, removePoints):
         self.start_points = amount
         self.show_points = showPoints
         self.add_points = addPoints
         self.remove_points = removePoints
+        
     def setFileName(self, name):
         self.filename = name
         
@@ -99,6 +103,8 @@ class EditAction():
 class EditWindow(QMainWindow):
     def __init__(self, parent, info):
         super(EditWindow, self).__init__()
+        
+        ## General window set up.
         self.info = info
         self.parent = parent
         self.layout = QGridLayout()
@@ -106,6 +112,8 @@ class EditWindow(QMainWindow):
         self.setCentralWidget(self.main_widget) 
         self.main_widget.setLayout(self.layout)
         self.setWindowTitle("Options")
+        
+        
         ###
         ## Global settings
         ###
@@ -114,6 +122,7 @@ class EditWindow(QMainWindow):
         self.maxIndex = 0
         
         
+        # Create larger font for points
         titleFont = QFont("Times", 10, QtGui.QFont.Bold) 
         self.saveTag = QLabel("Save filename: ")
         self.saveInput = QLineEdit(self.info.filename)
@@ -334,10 +343,14 @@ class EditWindow(QMainWindow):
 class MainWindow(QMainWindow):
     def __init__(self, parent, info):
         super(MainWindow, self).__init__()
+        
+        ## General initalisation. 
         self.setWindowTitle("Play")
         self.info = info
         self.recorder = Recorder()
         
+        
+        ## Set color scheme depending on style selected.
         if(self.info.style == 0):
             self.background_color = "white"
             self.square_color_normal = "grey"
@@ -361,40 +374,37 @@ class MainWindow(QMainWindow):
         p = self.palette()
         p.setColor(self.backgroundRole(), QColor(self.background_color))
         self.setPalette(p)
-                
 
-        
+        ## Create first rectangle details.
         self.begin_one = QtCore.QPoint()
         self.end_one = QtCore.QPoint()
         self.color_one = QtGui.QColor(self.square_color_normal)
         self.width_one= 140
         self.x_one = 300
         
-        
+        ## Create second rectangle details.
         self.begin_two = QtCore.QPoint()
         self.end_two = QtCore.QPoint()
         self.color_two = QtGui.QColor(self.square_color_normal)
         self.width_two = 140
         self.x_two = 1500
         
+        ## Initalise Mouse 
         self.mouse = Controller()
         
+        
+        ## Create exit menu option.
         exitAction = QAction(QIcon('exit.png'), "exit", self)
         exitAction.setShortcut('Ctrl+E')
         exitAction.triggered.connect(self.close_call)
       
-      
+        ## Add menu bar.
         menuBar = self.menuBar()
         fileMenu = menuBar.addMenu('&File')
         fileMenu.addAction(exitAction)
         
-        
-        
+        ## Initalise pygame and configer depending on if a joystick is available.
         pygame.init()
-       # print ("Joystics: " + str(pygame.joystick.get_count()))
-        
-        
-        
         if(pygame.joystick.get_count() < 1):
             self.type = "mouse"
         else:
@@ -404,21 +414,30 @@ class MainWindow(QMainWindow):
             self.type = "joystick"
        
 
-
+        ## Initalise basic variables. 
+        # This identifies mouse position, be it from the mouse or another controller.
         self.mouse_indicator = 0
+        # This indicates the current sensitivity.
         self.sensitivity = 1
+        # This indcates if the mouse movement is flipped.
         self.flipSensitivity = 0
+        # This indicates the default y position of the rectangles on the screen.
         self.default_y = 300
+        # This initalises the variable indicating the current activated square. 0 implies none are active.
         self.current_activated = 0
+        # This blocks points from dropping after the an inital point has been lost.
         self.lose_block = 0
+        # Inialises points based on Info class.
         self.points = self.info.start_points
+        # Signal for trail status. Required because of the way pyqt5 uses threading.
         self.trial_over = False
         
+        # Initalise square positions.
         self.set_first_square(300, self.default_y, 140, 80)
         self.set_second_square(1500, self.default_y, 140, 80)
-            
-        if(self.info.show_time):
         
+        # If time is active, create label and initalise it.
+        if(self.info.show_time):
             self.time_left = int(self.info.trial_length)
             self.timeLabel = QLabel(str(self.info.trial_length) + " seconds", self)
             self.timeLabel.setStyleSheet('color: green')
@@ -430,42 +449,49 @@ class MainWindow(QMainWindow):
             self.clock_timer.timeout.connect(self.update_time)
             self.clock_timer.start(1000)
        
+        # If show points is active, create label and initalise it.    
         if(self.info.show_points):
-            
             self.pointsLabel = QLabel(str(self.points), self)
             pointsFont = QFont("Times", 15, QtGui.QFont.Bold) 
             self.pointsLabel.move(850,150)
             self.pointsLabel.setFont(pointsFont)
-        #self.sensitivityLabel = QLabel("Sensitivity = 1x", self)
+
       
-        #self.sensitivityLabel.move(20,20)
+        # Maximize window and add auther tag.
         self.initalize_tag()
         self.showMaximized()
         self.show()
         
+        # Create timer to call tracking function every 100ms.
         self.timer = QTimer()
         self.timer.timeout.connect(self.track)
         self.timer.start(100)
         
         
-        
+        # Create timer for each action set in actions list.
         for action in self.info.Actions:
             t = Timer(float(action.time), self.call_action, [action])
             t.start()
             
+        # Create timer to indicate end of trial.    
         t = Timer(float(self.info.trial_length), self.end_trial)
         t.start()
+       
+       
        
     def update_time(self):
         if(self.trial_over):
             return;
         self.time_left = self.time_left-1
+        self.timeLabel.setText(str(self.time_left) + " seconds")
+        
+        ## If color time is active, set color depending on time relative to initial time.
         if(self.info.color_time and self.time_left < int(self.info.trial_length)/2 and self.time_left > int(self.info.trial_length)/4):
             self.timeLabel.setStyleSheet('color: orange')
         elif(self.info.color_time and self.time_left < int(self.info.trial_length)/4):
             self.timeLabel.setStyleSheet('color: red')
         
-        self.timeLabel.setText(str(self.time_left) + " seconds")
+        
     def end_trial(self):
         self.trial_over = True
         
@@ -474,9 +500,12 @@ class MainWindow(QMainWindow):
         print ("Closing")
         self.trial_over = True
         self.timer.stop()
-        #self.clock_timer.stop()
     
     def call_action(self, action):
+        '''
+            Handles all action calling from actions list.
+            Returns if trial time is already over.
+        '''
         if(self.trial_over):
             print("Failed to call action. Trial already finished.")
             return;
@@ -514,7 +543,6 @@ class MainWindow(QMainWindow):
     def update_labels(self):
         if(self.info.show_points== 1):
             self.pointsLabel.setText(str(self.points))
-        #self.sensitivityLabel.setText("Sensitivity = " + str(self.sensitivity) + "x")
         
     def paintEvent(self, event):
         '''
@@ -551,32 +579,41 @@ class MainWindow(QMainWindow):
             This is effectively the main loop of the 'game'.
             This functions moves the mouse, handles color changes and other effects.
         '''
+        
+        # If trail is over, indicated by signal "trial_over" then end the trial. Begin saving process.
         if(self.trial_over == True):
             if(self.timer):
                 self.timer.stop()
-            #if(self.clock_timer):
-                #self.clock_timer.stop()
             QMessageBox.about(None, "Finish", "You finished with " + str(self.points) +" points.")    
             SaveFileWindow(self)
             self.close_call()
            
     
     
-    
+        # Get width of window.
         xWidth = self.geometry().width()
         
+        # Get position of mouse or controler (x axis)
         self.pos = self.get_position()
+        
+        # Record position of input, before it is adjusted to sensitivity.
         self.recorder.record_pos(self.pos)
+        
+        # Adjust position by sensitivity settings.
         self.mouse_indicator = ((self.pos - (xWidth/2))*self.sensitivity) + (xWidth/2)
+        
+        # Variables for non blocking mode.
         not_in_square1 = False
         not_in_square2 = False
        
+        # Flip position if flip setting is active.
         if(self.flipSensitivity == 1):
             self.mouse_indicator = ((-self.pos + (xWidth/2))*self.sensitivity) + (xWidth/2)
        
         # Check rect one
         if(self.mouse_indicator < self.end_one.x() and self.mouse_indicator > self.begin_one.x()):
             if(self.current_activated != 1):
+                ## Pass case, gain a point.
                 self.color_one.setNamedColor(self.square_color_score)
                 self.color_two.setNamedColor(self.square_color_normal)
                 self.current_activated = 1
@@ -585,6 +622,7 @@ class MainWindow(QMainWindow):
         else:
             not_in_square1 = True      
         if(self.mouse_indicator < self.begin_one.x() and self.lose_block != 1):
+            ## Fail case, lose a point.
             self.color_one.setNamedColor(self.square_color_fail)
             self.lose()
             self.lose_block = 1
@@ -593,22 +631,26 @@ class MainWindow(QMainWindow):
         # Check rect two
         if(self.mouse_indicator < self.end_two.x() and self.mouse_indicator > self.begin_two.x()):
             if(self.current_activated != 2):
+                ## Pass case, gain a point.
                 self.color_two.setNamedColor(self.square_color_score) 
                 self.color_one.setNamedColor(self.square_color_normal)
                 self.current_activated = 2
                 self.gain()
                 self.lose_block = 0
         else:
-           
             not_in_square2 = True
             
         if(self.mouse_indicator > self.end_two.x() and self.lose_block != 1):
+            ## Fail case, lose a point.
             self.color_two.setNamedColor(self.square_color_fail)   
             self.lose()            
             self.lose_block = 1
        
+        # If blocking is not active, then reset current square if between the two.
         if(not_in_square1 and not_in_square2 and self.info.blocking == False and self.mouse_indicator > self.end_one.x() and self.mouse_indicator < self.begin_two.x()):
             self.current_activated = 0
+        
+        # Update the Ui.
         self.update()
 
    
@@ -663,9 +705,6 @@ class SaveFileWindow(QMainWindow):
         self.layout.addWidget(self.save_button, 0, 1)
         
         
-        #self.exportSave = QCheckBox("Export to Excel");
-        #self.exportSave.toggle()
-       #self.layout.addWidget(self.exportSave, 0, 1)
         
         self.show()
 
@@ -791,6 +830,4 @@ class SaveFileWindow(QMainWindow):
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     startWindow= StartWindow()
-    #mainWindow.resize(200, 360)
-    #mainWindow.show()
     sys.exit(app.exec_())
