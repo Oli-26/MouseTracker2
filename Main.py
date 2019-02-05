@@ -58,16 +58,16 @@ class InfoPackage():
     def __init__(self):
         ## Trail settings.
         self.Actions = list()
-        self.trial_length = 20
-        self.style = 0
-        self.show_time = False
-        self.show_points = False
-        self.add_points = True
-        self.remove_points = True
-        self.start_points = 0
-        self.blocking = True
-        self.color_time = False
-        self.filename = "filename"
+        self.trial_length = 20 # Length of trial in seconds.
+        self.style = 0 # Style, this corresponds to style_list bellow.
+        self.show_time = False # Option to show time. (Default false)
+        self.show_points = False # Option to show points. (Default false)
+        self.add_points = True # Options to add points when the user scores. (Default true)
+        self.remove_points = True # Option to remove points when user misses. (Default true)
+        self.start_points = 0 # Defines starting points.
+        self.blocking = True  # Allows user to hit the same box multiple times in a row if false. (Default true)
+        self.color_time = False # Time is now displayed with a color based on urgancy.
+        self.filename = "filename" # This is the name the file with be saved with.
     
         ## These lists are required for exporting to excel. 
         self.style_list = ["light", "dark", "strange", "no feedback"] 
@@ -113,7 +113,6 @@ class EditWindow(QMainWindow):
         self.main_widget.setLayout(self.layout)
         self.setWindowTitle("Options")
         
-        
         ###
         ## Global settings
         ###
@@ -140,10 +139,10 @@ class EditWindow(QMainWindow):
         self.maxIndex = self.maxIndex+1
         self.timeInput = QLineEdit(str(self.info.trial_length));
         self.showTime = QCheckBox("Show time")
-        if(self.info.show_time == 1):
+        if(self.info.show_time):
             self.showTime.toggle()
         self.colorTime = QCheckBox("Color time")
-        if(self.info.color_time == 1):
+        if(self.info.color_time):
             self.colorTime.toggle()
         
         self.layout.addWidget(self.timeInput, self.maxIndex, 0)
@@ -158,12 +157,12 @@ class EditWindow(QMainWindow):
         ####
         self.maxIndex = self.maxIndex+1
         self.showPoints = QCheckBox("Show Points")
-        if(self.info.show_points == 1):
+        if(self.info.show_points):
             self.showPoints.toggle()
         
         self.startingPoints = QLineEdit(str(self.info.start_points))
         self.addPoints = QCheckBox("Gain points")
-        if(self.info.add_points == 1):
+        if(self.info.add_points):
             self.addPoints.toggle()
       
         self.layout.addWidget(self.showPoints, self.maxIndex, 1)
@@ -176,7 +175,7 @@ class EditWindow(QMainWindow):
         if(self.info.blocking):
             self.blocking.toggle()
         self.removePoints = QCheckBox("Lose points")
-        if(self.info.remove_points == 1):
+        if(self.info.remove_points):
             self.removePoints.toggle()
             
         self.layout.addWidget(self.blocking, self.maxIndex, 1)
@@ -535,7 +534,7 @@ class MainWindow(QMainWindow):
     
     
     def update_labels(self):
-        if(self.info.show_points== 1):
+        if(self.info.show_points):
             self.pointsLabel.setText(str(self.points))
         
     def paintEvent(self, event):
