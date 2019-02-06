@@ -731,6 +731,9 @@ class SaveFileWindow(QMainWindow):
         except:
            print("Saving failed")
            
+           # Recur saving step, sometimes saving fails because the excel file to be overwritten is open. This recuring allows the user to clsoe excel.
+           save_file()
+           
            
         ## From here it is saving the file in excel
         import xlwt
