@@ -13,6 +13,7 @@ import pygame
 from threading import Timer
 import jsonify
 import json
+import time 
 
 from os import listdir
 import os
@@ -68,6 +69,7 @@ class InfoPackage():
         self.blocking = True  # Allows user to hit the same box multiple times in a row if false. (Default true)
         self.color_time = False # Time is now displayed with a color based on urgancy.
         self.filename = "filename" # This is the name the file with be saved with.
+        self.legacy_tracking = False # if true, Mouse tracking is done by taking the difference from the centre (without persistence).
     
         ## These lists are required for exporting to excel. 
         self.style_list = ["light", "dark", "strange", "no feedback"] 
@@ -93,6 +95,9 @@ class InfoPackage():
         
     def setFileName(self, name):
         self.filename = name
+        
+    def setLegacy(self, legacy):
+        self.legacy_tracking = legacy
         
 class EditAction():
     def __init__(self, type, value, time):
@@ -154,6 +159,12 @@ class EditWindow(QMainWindow):
         pointLabel = QLabel("Points")
         self.layout.addWidget(pointLabel, self.maxIndex, 0)
         
+        
+        self.Legacy = QCheckBox("Legacy tracking")
+        if(self.info.legacy_tracking):
+            self.Legacy.toggle()
+            
+        self.layout.addWidget(self.Legacy, self.maxIndex, 1)    
         ####
         self.maxIndex = self.maxIndex+1
         self.showPoints = QCheckBox("Show Points")
@@ -314,7 +325,7 @@ class EditWindow(QMainWindow):
         self.info.setTrialTime(self.timeInput.text(), self.showTime.isChecked(), self.colorTime.isChecked())
         self.info.setStyle(self.style.currentIndex(), self.blocking.isChecked())
         self.info.setPoints(startPoints, self.showPoints.isChecked(), self.addPoints.isChecked(), self.removePoints.isChecked())
-      
+        self.info.setLegacy(self.Legacy.isChecked())
         
         ## Create actions list from inputs.
         for i in range(0, len(self.ActionsTypes)):
@@ -401,15 +412,26 @@ class MainWindow(QMainWindow):
         if(pygame.joystick.get_count() < 1):
             self.type = "mouse"
         else:
-            print("Joystick connected.")
-            self.my_joystick = pygame.joystick.Joystick(0)
-            self.my_joystick.init()
-            self.type = "joystick"
-       
+            if(pygame.joystick.get_count() == 1):
+                print("Joystick connected.")
+                self.my_joystick = pygame.joystick.Joystick(0)
+                self.my_joystick.init()
+                self.type = "joystick"
+            #if(pygame.joystick.get_count() == 2):
+            #    print("Two joysticks connected")
+            #    self.my_joystick = pygame.joystick.Joystick(0)
+            #    self.my_joystick2 = pygame.joystick.Joystick(1)
+            #    self.type = "joystick2"
+            #    self.recorder2 = Recorder()
+            #   self.mouse_position2 = self.geometry().width()/2
+            #    self.mouse_indicator2 = self.geometry().width()/2
 
         ## Initalise basic variables. 
-        # This identifies mouse position, be it from the mouse or another controller.
-        self.mouse_indicator = 0
+        
+        # This identifies (actual in pixels) mouse position, be it from the mouse or another controller.
+        self.mouse_position = self.geometry().width()/2
+        # This identifies (adjusted/relative) mouse position, be it from the mouse or another controller.
+        self.mouse_indicator = self.geometry().width()/2
         # This indicates the current sensitivity.
         self.sensitivity = 1
         # This indcates if the mouse movement is flipped.
@@ -458,7 +480,8 @@ class MainWindow(QMainWindow):
         # Create timer to call tracking function every 100ms.
         self.timer = QTimer()
         self.timer.timeout.connect(self.track)
-        self.timer.start(100)
+        self.timer.start(40)
+        self.startTime = time.time()
         
         
         # Create timer for each action set in actions list.
@@ -562,17 +585,20 @@ class MainWindow(QMainWindow):
         '''
         if(self.type == "mouse"):
             return self.mouse.position[0]
-        elif(self.type == "joystick"):
+        else:
             pygame.event.pump()
             #print(self.my_joystick.get_axis(0))
+
             return (1+self.my_joystick.get_axis(0))*self.geometry().width()/2
-        
+
     def track(self):
         '''
             This is effectively the main loop of the 'game'.
             This functions moves the mouse, handles color changes and other effects.
         '''
-        
+        self.curTime = time.time()
+
+        self.recorder.record_time(self.curTime-self.startTime)
         # If trail is over, indicated by signal "trial_over" then end the trial. Begin saving process.
         if(self.trial_over == True):
             if(self.timer):
@@ -586,23 +612,44 @@ class MainWindow(QMainWindow):
         # Get width of window.
         xWidth = self.geometry().width()
         
+            
+            
+            
         # Get position of mouse or controler (x axis)
         self.pos = self.get_position()
         
-        # Record position of input, before it is adjusted to sensitivity.
-        self.recorder.record_pos(self.pos)
         
-        # Adjust position by sensitivity settings.
-        self.mouse_indicator = ((self.pos - (xWidth/2))*self.sensitivity) + (xWidth/2)
+        if(self.info.legacy_tracking):
         
+            self.mouse_indicator = ((self.pos - (xWidth/2))*self.sensitivity) + (xWidth/2)
+        else:
+        
+            # Get difference between old position and new position
+            self.tick_difference = self.pos - self.mouse_position
+
+            
+            # Set for next tracking.
+            self.mouse_position = self.pos
+            
+            # Record position of input, before it is adjusted to sensitivity.
+            self.recorder.record_pos(self.pos)
+            
+            # Adjust position by sensitivity settings.
+            if(self.flipSensitivity == 1):
+                self.mouse_indicator = self.mouse_indicator - self.tick_difference*self.sensitivity
+            else:
+                self.mouse_indicator = self.mouse_indicator + self.tick_difference*self.sensitivity
+            
+            
         # Variables for non blocking mode.
         not_in_square1 = False
         not_in_square2 = False
+
+        # OLD # self.mouse_indicator = ((-self.pos + (xWidth/2))*self.sensitivity) + (xWidth/2)
        
-        # Flip position if flip setting is active.
-        if(self.flipSensitivity == 1):
-            self.mouse_indicator = ((-self.pos + (xWidth/2))*self.sensitivity) + (xWidth/2)
-       
+        # Recorder relative position of input. This is the position of the mouse indicator (hence after the application of sensitivity and flipping)
+        self.recorder.record_rel_pos(self.mouse_indicator)
+        
         # Check rect one
         if(self.mouse_indicator < self.end_one.x() and self.mouse_indicator > self.begin_one.x()):
             if(self.current_activated != 1):
@@ -669,16 +716,25 @@ class MainWindow(QMainWindow):
 class Recorder():
     def __init__(self):
         self.mouseX = list()
-        
+        self.relX = list()
+        self.realTime = list()
         
     def record_pos(self, x):
        self.mouseX.append(x)
-    
+       
+    def record_rel_pos(self, x):
+       self.relX.append(x)
         
+    def record_time(self, t):
+        self.realTime.append(t)
+        
+    def get_real_time(self):
+        return self.realTime
     def get_x_list(self):
         return self.mouseX
     
-        
+    def get_rel_x_list(self):
+        return self.relX
 
 class SaveFileWindow(QMainWindow):
      def __init__(self, parent=None):
@@ -748,6 +804,7 @@ class SaveFileWindow(QMainWindow):
         # Add in time stamps for data
         
         tempList = self.parent.recorder.get_x_list()
+        realTimes = self.parent.recorder.get_real_time()
         if(not len(self.parent.recorder.get_x_list()) == 0):
             worksheet.write(0, 0, "Time (in ms)")
             worksheet.write(0, 1, "X position")
@@ -756,67 +813,80 @@ class SaveFileWindow(QMainWindow):
             yPos = 1
             
             for n in tempList:
-                worksheet.write(yPos, 0, str(yPos*100))
+                worksheet.write(yPos, 0, str(int(1000*realTimes[yPos-1])))
                 worksheet.write(yPos, 1, str(n))
                 
                 norm = (int)(100*(n/self.parent.geometry().width()))
                 worksheet.write(yPos, 2, str( norm/100))
                 yPos = yPos+1
                 
+        tempList = self.parent.recorder.get_rel_x_list()
+        if(not len(self.parent.recorder.get_x_list()) == 0):
+            worksheet.write(0, 3, "Relative X position")
+            worksheet.write(0, 4, "Relative X position (normalized)")
+            time_index = 1
+            yPos = 1
+            
+            for n in tempList:
+                worksheet.write(yPos, 3, str(n))
                 
+                norm = (int)(100*(n/self.parent.geometry().width()))
+                worksheet.write(yPos, 4, str( norm/100))
+                yPos = yPos+1
        
         
-        worksheet.write(0, 3, "Points = " + str(self.parent.points))
+        worksheet.write(0, 5, "Points = " + str(self.parent.points))
         
         
         ## Trial options
-        worksheet.write(0, 4, "Length = " + str(self.parent.info.trial_length))
-        worksheet.write(1, 4, "Start points = " + str(self.parent.info.start_points))
+        trial_options_col = 6
+        worksheet.write(0, trial_options_col, "Length = " + str(self.parent.info.trial_length))
+        worksheet.write(1, trial_options_col, "Start points = " + str(self.parent.info.start_points))
         
         
         if(self.parent.info.show_points):
-            worksheet.write(2,4, "Show points: true")
+            worksheet.write(2,trial_options_col, "Show points: true")
         else:
-            worksheet.write(2,4, "Show points: false")
+            worksheet.write(2,trial_options_col, "Show points: false")
         
         
         
         if(self.parent.info.add_points):
-            worksheet.write(3,4, "Add points: true")
+            worksheet.write(3,trial_options_col, "Add points: true")
         else:
-            worksheet.write(3,4, "Add points: false")
+            worksheet.write(3,trial_options_col, "Add points: false")
         
 
         if(self.parent.info.remove_points):
-            worksheet.write(4,4, "Remove points: true")
+            worksheet.write(4,trial_options_col, "Remove points: true")
         else:
-            worksheet.write(4,4, "Remove points: false")
+            worksheet.write(4,trial_options_col, "Remove points: false")
         
         
         if(self.parent.info.show_time):
-            worksheet.write(5,4, "Show time: true")
+            worksheet.write(5,trial_options_col, "Show time: true")
         else:
-            worksheet.write(5,4, "Show time: false")
+            worksheet.write(5,trial_options_col, "Show time: false")
         
         if(self.parent.info.color_time):
-           worksheet.write(6,4, "Color time: true")
+           worksheet.write(6,trial_options_col, "Color time: true")
         else:
-            worksheet.write(6,4, "Color time: false")
+            worksheet.write(6,trial_options_col, "Color time: false")
         
         if(self.parent.info.blocking):
-            worksheet.write(7,4, "blocking: true")
+            worksheet.write(7,trial_options_col, "blocking: true")
         else:
-            worksheet.write(7,4, "blocking: false")
+            worksheet.write(7,trial_options_col, "blocking: false")
         
       
         
-        worksheet.write(8,4, "Style: " + self.parent.info.style_list[self.parent.info.style])
+        worksheet.write(8,trial_options_col, "Style: " + self.parent.info.style_list[self.parent.info.style])
         
         
-        worksheet.write(0, 5, "Actions [type, value, time]")
+        worksheet.write(0, 7, "Actions [type, value, time(seconds)]")
         yPos = 1
         for n in self.parent.info.Actions:
-            worksheet.write(yPos, 5, "[" + str(self.parent.info.action_types[n.type]) + ", " + str(n.value) + ", " + str(n.time) + "]")
+            worksheet.write(yPos, 7, "[" + str(self.parent.info.action_types[n.type]) + ", " + str(n.value) + ", " + str(n.time) + "]")
             yPos = yPos+1
         workbook.save("saves/" + self.parent.info.filename + ".xls")
         self.close()
